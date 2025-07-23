@@ -2,6 +2,8 @@ import jwt from "jsonwebtoken";
 import prisma from "../db.mjs";
 import bcrypt from "bcrypt";
 import * as z from "zod";
+import { sendEmail } from "../email.mjs";
+import { ServerError } from "../error.mjs";
 
 // input model fro user registration
 const UserModel = z.object({
@@ -16,8 +18,8 @@ const registerController = async (req, res, next) => {
 
   if (!req.body.name || !req.body.email || !req.body.password) {
     res.statusCode = 400;
-    return res.json({ error: "input is not valid" });
-    // throw new Error(JSON.stringify({ error: "input is not valid" }))
+    // return res.json({ error: "input is not valid" });
+    throw new ServerError(JSON.stringify({ error: "input is not valid" }));
   }
 
   // hash password of user
@@ -40,7 +42,7 @@ const loginController = async (req, res, next) => {
   // validate input
   if (!req.body.email || !req.body.password) {
     res.statusCode = 400;
-    return res.json({ error: "input is not valid" });
+    throw new ServerError({ error: "input is not valid" });
   }
 
   // find user in db
@@ -50,15 +52,16 @@ const loginController = async (req, res, next) => {
     },
   });
   if (!user) {
-    res.statusCode = 404;
-    return res.json({ error: "user DNE" });
+    // res.statusCode = 404;
+    // return res.json({ error: "user DNE" });
+    throw new ServerError(400, "invalid server link");
   }
 
   // match password
   const isOk = await bcrypt.compare(req.body.password, user.password);
   if (!isOk) {
     res.statusCode = 400;
-    return res.json({ error: "password is wrong" });
+    throw new ServerError({ error: "password is wrong" });
   }
 
   const token = jwt.sign(
